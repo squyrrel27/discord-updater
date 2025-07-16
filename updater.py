@@ -1,4 +1,3 @@
-import os, os.path as P
 import requests
 import time, datetime
 import configparser
@@ -76,7 +75,6 @@ class Updater:
                 else:
                     fOd.write(line)
 
-
 @click.group()
 @click.option('-c', '--config', default='config.ini', type=click.Path(exists=True))
 def main(config):
@@ -96,14 +94,6 @@ def run():
 def echo(text, level=0):
     space = '  ' * level
     click.echo('[%s] %s%s' % (datetime.datetime.now(), space, text))
-
-def get_files(directory):
-    result = []    
-    for filename in os.listdir(directory):
-        f = P.join(directory, filename)
-        if P.isfile(f):
-            result.append(filename)
-    return result
 
 if __name__ == '__main__':
     main()
