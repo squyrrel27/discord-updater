@@ -3,10 +3,8 @@ import time, datetime
 import configparser
 import click
 
-UPDATER = None
-
 class Updater:
-    version = "0.0.4"
+    version = "0.0.5"
 
     def __init__(self, config_dir):
         config = configparser.ConfigParser()
@@ -19,25 +17,21 @@ class Updater:
         self.yaml_path = config['yaml']['path']
         self.yaml_dependency = config['yaml']['dependency']
 
-    def run(self, testing=False):
-        echo("******** %s DISCORD UPDATER V%s %s ********" % \
-            ('[TEST]' if testing else '', self.version,  '[TEST]' if testing else ''))
+    def update(self, isProd=False):
+        testToken = '[TEST]' if not isProd else ''
+        echo("******** %s DISCORD UPDATER V%s %s ********" % (testToken, self.version, testToken))
         
         lines, current_dependency = self.find_current_dependency()
         new_dependency = self.yaml_dependency.replace("${tag}", self.get_latest_tag())
-
         if current_dependency != new_dependency:
             echo("There is an available update!", 1)
             echo("%s -> %s" % (current_dependency, new_dependency), 2)
-            if not testing:
+            if isProd:
                 echo("Writing to the yaml file...", 1)
                 self.save_dependency(lines, new_dependency)
                 echo("Done!", 1)
         else:
             echo("No updates at this time.", 1)
-
-    def test(self):
-        self.run(True)
 
     # Grabs the tag name using github's api
     def get_latest_tag(self):
@@ -47,6 +41,9 @@ class Updater:
             'X-GitHub-Api-Version': "2022-11-28"
         }
         result = requests.get(f"https://api.github.com/repos/{self.github_repository}/releases/latest", headers=headers)
+        tag = result.json().get('tag_name', None)
+        if tag is None:
+            raise Exception("Could not load the github tag. Do you have a valid github api token in the config?")
         return result.json()['tag_name']
 
     # Finds the current tag name by reading the yaml config file
@@ -75,19 +72,22 @@ class Updater:
                 else:
                     fOd.write(line)
 
+
 @click.group()
 @click.option('-c', '--config', default='config.ini', type=click.Path(exists=True))
-def main(config):
-    global UPDATER
-    UPDATER = Updater(config)
+@click.pass_context
+def main(ctx, config):
+    ctx.obj = Updater(config)
 
-@main.command(help="Tests the program without changing the yaml file")
-def test():
-    UPDATER.test()
+@main.command(help="Check for an update without changing the yaml file")
+@click.pass_obj
+def check(obj):
+    obj.update()
 
-@main.command(help="Runs the program")
-def run():
-    UPDATER.run()
+@main.command(help="Check for an update and change the yaml file")
+@click.pass_obj
+def update(obj):
+    obj.update(True)
 
 
 # HELPER METHODS

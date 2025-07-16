@@ -27,12 +27,15 @@ discord-updater allows our discord music bot to grab the latest youtube plugin v
 ## Starting the processes
 - Run the program:  
     ```
-    python3 updater.py test  
-    python3 updater.py run
+    # Check for an update without changing the yaml file
+    $ python3 updater.py check  
+
+    # Check for an update and change the yaml file
+    $ python3 updater.py update
 
     # Config defaults to ./config.ini. Use the following 
     # if you need an absolute path:
-    python3 updater.py --config /where/ever/custom.ini test
+    $ python3 updater.py --config /where/ever/custom.ini test
     ```
 ## Automating the processes
 - Run from crontab:  
