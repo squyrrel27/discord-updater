@@ -4,7 +4,7 @@ import configparser
 import click
 
 class Updater:
-    version = "0.0.5"
+    version = "0.0.6"
 
     def __init__(self, config_dir):
         config = configparser.ConfigParser()
