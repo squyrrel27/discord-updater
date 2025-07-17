@@ -1,10 +1,11 @@
+import re
 import requests
 import time, datetime
 import configparser
 import click
 
 class Updater:
-    version = "0.0.7"
+    version = "0.0.8"
     github_url = "https://api.github.com/repos/${repo}/releases/latest"
 
     def __init__(self, config_dir):
@@ -22,9 +23,10 @@ class Updater:
         }
         self.yaml_path = config['yaml']['path']
         self.yaml_dependency = config['yaml']['dependency']
-        self.yaml_lines = []
+        newLine = '\\n' if self.yaml_dependency.endswith('${tag}') else ''
+        self.yaml_pattern = re.compile(re.escape(self.yaml_dependency).replace("\\$\\{tag\\}", "(.*)" + newLine))
         with open(self.yaml_path, 'r+') as fOd:
-            self.yaml_lines = fOd.readlines()
+            self.yaml_text = fOd.read()
 
     def update(self, isProd=False):
         testToken = '[TEST]' if not isProd else ''
@@ -51,28 +53,20 @@ class Updater:
 
     # Grabs the current tag name by reading the yaml config file
     def get_current_tag(self):
-        tag = None
-        for line in self.yaml_lines:
-            findDependency = line.find(self._replace_tag())
-            if findDependency != -1:
-                tag = line[findDependency+len(self._replace_tag()):].replace('\n', '').strip()
-                break
+        match = re.search(self.yaml_pattern, self.yaml_text)
+        if not match:
+            raise Exception("Current tag could not be found in the given yaml file")
+        
+        return match.group(1)
 
-        if tag is None:
-            raise Exception("Current tag could not be found in the given yaml file")            
-        return tag
-
+    # Saves the yaml config file with the new tag substituted in
     def save_yaml(self, tag):
+        match = re.search(self.yaml_pattern, self.yaml_text)
+        if not match:
+            raise Exception("Current tag could not be found in the given yaml file")
+        
         with open(self.yaml_path, 'w+') as fOd:
-            for line in self.yaml_lines:
-                findDependency = line.find(self._replace_tag())
-                if findDependency != -1:
-                    fOd.write(line[0:findDependency+len(self._replace_tag())] + tag + "\n")
-                else:
-                    fOd.write(line)
-
-    def _replace_tag(self, tag=""):
-        return self.yaml_dependency.replace("${tag}", tag)
+            fOd.write(self.yaml_text.replace(match.group(), match.group().replace(match.group(1), tag)))
 
 
 @click.group()
